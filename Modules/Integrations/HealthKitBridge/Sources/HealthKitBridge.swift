@@ -1,5 +1,8 @@
 import Foundation
 import HealthKit
+import os.log
+
+private let log = Logger(subsystem: "com.juancanul.LifeOS", category: "HealthKitBridge")
 
 /// Read-only adapter over HealthKit. Reads "today" snapshot + last-7-days
 /// history for the metrics the dashboard cares about.
@@ -51,7 +54,10 @@ public actor HealthKitBridge {
     }
 
     public func requestAccess() async throws {
-        guard let store else { return }
+        guard let store else {
+            log.error("HealthKit not available on this device")
+            return
+        }
         let identifiers: [HKQuantityTypeIdentifier] = [
             .stepCount,
             .activeEnergyBurned,
@@ -60,7 +66,13 @@ public actor HealthKitBridge {
         ]
         let raw: [HKObjectType?] = identifiers.map { HKObjectType.quantityType(forIdentifier: $0) }
         let read = Set(raw.compactMap { $0 })
-        try await store.requestAuthorization(toShare: [], read: read)
+        do {
+            try await store.requestAuthorization(toShare: [], read: read)
+            log.info("HealthKit authorization request completed")
+        } catch {
+            log.error("HealthKit authorization failed: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     // MARK: - Reads

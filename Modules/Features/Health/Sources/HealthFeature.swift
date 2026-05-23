@@ -33,8 +33,15 @@ final class HealthViewModel {
         self.week = await week
     }
 
+    var lastError: String? = nil
+
     func requestAccess() async {
-        try? await bridge.requestAccess()
+        do {
+            try await bridge.requestAccess()
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
         await refresh()
     }
 }
@@ -86,6 +93,11 @@ struct HealthScreen: View {
                 Text("LifeOS reads steps, active calories, exercise minutes, and resting heart rate to give you a calm overview of your day. Data stays on your device.")
                     .font(Type.bodySoft)
                     .foregroundStyle(Palette.textSecondary)
+                if let err = viewModel.lastError {
+                    Text(err)
+                        .font(Type.caption)
+                        .foregroundStyle(Palette.danger)
+                }
                 GlassButton("Allow access", systemImage: "heart") {
                     Task { await viewModel.requestAccess() }
                 }
