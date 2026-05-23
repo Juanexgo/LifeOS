@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Install Tuist
+        run: brew install tuist
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-xcode-${{ hashFiles('**/Project.swift', '**/Tuist.swift') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
+      - name: Generate Xcode project
+        run: tuist generate --no-open
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -workspace LifeOS.xcworkspace \
+            -scheme LifeOS \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build \
+            | xcbeautify --renderer github-actions
+
+      - name: Test
+        run: |
+          xcodebuild \
+            -workspace LifeOS.xcworkspace \
+            -scheme LifeOS \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            CODE_SIGNING_ALLOWED=NO \
+            test \
+            | xcbeautify --renderer github-actions
+
+  lint:
+    name: Lint
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for trailing whitespace
+        run: |
+          if git grep -nIE ' +$' -- '*.swift'; then
+            echo "Trailing whitespace found"
+            exit 1
+          fi
+      - name: Check for TODO without owner
+        run: |
+          # Soft check — TODOs are allowed but should at least have a phase
+          # marker. Surface them without failing the build.
+          git grep -nE 'TODO[^:]' -- '*.swift' || true
