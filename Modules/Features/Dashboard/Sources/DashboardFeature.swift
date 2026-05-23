@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 import DesignSystem
 import SharedUI
 import PersistenceKit
@@ -37,6 +38,7 @@ struct DashboardScreen: View {
                         header
                         assistantCard
                         todayCard
+                        weekStreakCard
                         if !events.isEmpty || bridge.currentStatus() == .notDetermined {
                             calendarCard
                         }
@@ -174,6 +176,73 @@ struct DashboardScreen: View {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - Week streak
+
+    private struct DayCount: Identifiable {
+        var id: Date { date }
+        let date: Date
+        let completed: Int
+    }
+
+    private var weeklyCompletions: [DayCount] {
+        let cal = Calendar.current
+        let end = cal.startOfDay(for: cal.date(byAdding: .day, value: 1, to: .now)!)
+        let start = cal.date(byAdding: .day, value: -7, to: end)!
+        let recent = allTasks.compactMap { t -> Date? in
+            guard t.isCompleted, let done = t.completedAt,
+                  done >= start, done < end else { return nil }
+            return cal.startOfDay(for: done)
+        }
+        let grouped = Dictionary(grouping: recent, by: { $0 })
+        return stride(from: 0, to: 7, by: 1).compactMap { offset in
+            guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
+            return DayCount(date: day, completed: grouped[day]?.count ?? 0)
+        }
+    }
+
+    private var weekStreakCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: Spacing.sm.value) {
+                SectionHeader("This week",
+                              subtitle: "Tasks completed per day")
+                if weeklyCompletions.allSatisfy({ $0.completed == 0 }) {
+                    Text("Complete a task to start your week.")
+                        .font(Type.bodySoft)
+                        .foregroundStyle(Palette.textSecondary)
+                        .frame(height: 100, alignment: .center)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Chart(weeklyCompletions) { day in
+                        BarMark(
+                            x: .value("Day", day.date, unit: .day),
+                            y: .value("Done", day.completed)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Palette.success, Palette.success.opacity(0.4)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .cornerRadius(4)
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day)) { _ in
+                            AxisValueLabel(format: .dateTime.weekday(.narrow), centered: true)
+                                .foregroundStyle(Palette.textTertiary)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in
+                            AxisGridLine().foregroundStyle(Palette.separator)
+                            AxisValueLabel().foregroundStyle(Palette.textTertiary)
+                        }
+                    }
+                    .frame(height: 120)
                 }
             }
         }

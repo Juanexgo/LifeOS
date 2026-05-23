@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 import DesignSystem
 import SharedUI
 import PersistenceKit
@@ -33,6 +34,7 @@ struct FocusScreen: View {
                         } else {
                             timerCard
                         }
+                        weeklyChartCard
                         historyCard
                     }
                     .padding(.horizontal, .md)
@@ -147,6 +149,70 @@ struct FocusScreen: View {
                     GlassButton("Stop", systemImage: "stop.fill", tone: .danger) {
                         viewModel.stop(saving: ctx, completed: false)
                     }
+                }
+            }
+        }
+    }
+
+    private struct WeekBucket: Identifiable {
+        var id: Date { date }
+        let date: Date
+        let minutes: Int
+    }
+
+    private var weeklyBuckets: [WeekBucket] {
+        let cal = Calendar.current
+        let end = cal.startOfDay(for: cal.date(byAdding: .day, value: 1, to: .now)!)
+        let start = cal.date(byAdding: .day, value: -7, to: end)!
+        let recent = sessions.filter { $0.startedAt >= start && $0.startedAt < end }
+        let grouped = Dictionary(grouping: recent) {
+            cal.startOfDay(for: $0.startedAt)
+        }
+        return stride(from: 0, to: 7, by: 1).compactMap { offset in
+            guard let day = cal.date(byAdding: .day, value: offset, to: start) else { return nil }
+            let mins = grouped[day]?.map(\.actualMinutes).reduce(0, +) ?? 0
+            return WeekBucket(date: day, minutes: mins)
+        }
+    }
+
+    private var weeklyChartCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: Spacing.sm.value) {
+                SectionHeader("Last 7 days",
+                              subtitle: "Deep work minutes")
+                if weeklyBuckets.allSatisfy({ $0.minutes == 0 }) {
+                    Text("Start a session — your weekly cadence will appear here.")
+                        .font(Type.bodySoft)
+                        .foregroundStyle(Palette.textSecondary)
+                        .frame(height: 140, alignment: .center)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Chart(weeklyBuckets) { day in
+                        BarMark(
+                            x: .value("Day", day.date, unit: .day),
+                            y: .value("Minutes", day.minutes)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Palette.accentSecondary, Palette.accent.opacity(0.5)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .cornerRadius(4)
+                    }
+                    .chartXAxis {
+                        AxisMarks(values: .stride(by: .day)) { _ in
+                            AxisValueLabel(format: .dateTime.weekday(.narrow), centered: true)
+                                .foregroundStyle(Palette.textTertiary)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in
+                            AxisGridLine().foregroundStyle(Palette.separator)
+                            AxisValueLabel().foregroundStyle(Palette.textTertiary)
+                        }
+                    }
+                    .frame(height: 140)
                 }
             }
         }
