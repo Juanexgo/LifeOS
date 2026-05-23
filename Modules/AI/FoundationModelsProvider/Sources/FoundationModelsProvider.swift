@@ -73,12 +73,13 @@ public final class FoundationModelsProvider: AIProvider {
 
                     var emitted = ""
                     for try await partial in stream {
-                        // `partial` is the cumulative content so far. Emit
-                        // only the new delta.
-                        let snapshot = String(describing: partial)
-                        if snapshot.count > emitted.count {
-                            let delta = String(snapshot.dropFirst(emitted.count))
-                            emitted = snapshot
+                        // The framework yields a `Snapshot` value whose
+                        // `.content` holds the cumulative text so far —
+                        // NOT a delta. We compute the delta ourselves.
+                        let cumulative = partial.content
+                        if cumulative.count > emitted.count {
+                            let delta = String(cumulative.dropFirst(emitted.count))
+                            emitted = cumulative
                             continuation.yield(AIChunk(delta: delta))
                         }
                         if Task.isCancelled { break }
