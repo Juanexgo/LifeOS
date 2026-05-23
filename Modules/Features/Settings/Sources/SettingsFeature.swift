@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 import DesignSystem
 import SharedUI
 import SecurityKit
+import PersistenceKit
 
 public enum SettingsFeature {
     public enum Route: Hashable, Sendable {
@@ -45,6 +47,7 @@ final class SettingsViewModel {
 @MainActor
 struct SettingsScreen: View {
     @Bindable var viewModel: SettingsViewModel
+    @Environment(\.modelContext) private var ctx
     @State private var showDeepSeekEntry = false
 
     var body: some View {
@@ -56,6 +59,9 @@ struct SettingsScreen: View {
                         aiProvidersCard
                         ollamaCard
                         privacyCard
+                        #if DEBUG
+                        debugCard
+                        #endif
                         aboutCard
                     }
                     .padding(.horizontal, .md)
@@ -183,6 +189,29 @@ struct SettingsScreen: View {
             }
         }
     }
+
+    #if DEBUG
+    private var debugCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: Spacing.sm.value) {
+                SectionHeader("Debug", subtitle: "Only visible in Debug builds")
+                Text("Populate the app with realistic sample data for screenshots and demos.")
+                    .font(Type.bodySoft)
+                    .foregroundStyle(Palette.textSecondary)
+                HStack {
+                    GlassButton("Seed sample data", systemImage: "sparkles") {
+                        SampleData.seed(into: ctx)
+                        Haptics.success()
+                    }
+                    GlassButton("Wipe", systemImage: "trash", tone: .danger) {
+                        SampleData.wipe(ctx)
+                        Haptics.warn()
+                    }
+                }
+            }
+        }
+    }
+    #endif
 
     private var aboutCard: some View {
         GlassCard {
