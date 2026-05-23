@@ -3,7 +3,7 @@
 > An AI-powered personal operating system for iPhone — built on iOS 26, Swift 6,
 > SwiftUI, SwiftData, and Apple Intelligence.
 
-[![Build](https://github.com/juancanul/lifeos/actions/workflows/ci.yml/badge.svg)](https://github.com/juancanul/lifeos/actions/workflows/ci.yml)
+[![Build](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
 ![iOS](https://img.shields.io/badge/iOS-26.0%2B-blue.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular%20Tuist-purple.svg)
