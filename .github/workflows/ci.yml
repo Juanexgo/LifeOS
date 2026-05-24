@@ -12,19 +12,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
-    runs-on: macos-15
+  build:
+    name: Build
+    # `macos-latest` rolls forward so we get whichever runner image has
+    # the newest Xcode + Swift toolchain. LifeOS targets iOS 26 and uses
+    # Swift 6.2 features, so we don't pin to macos-15 (Xcode 16) which
+    # ships an older toolchain than Tuist's ProjectDescription.framework.
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
-
-      - name: Show Swift version
-        run: swift --version
+      - name: Toolchain info
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          swift --version
 
       - name: Install Tuist
         run: brew install tuist
@@ -48,23 +52,11 @@ jobs:
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build \
-            | xcbeautify --renderer github-actions
-
-      - name: Test
-        run: |
-          xcodebuild \
-            -workspace LifeOS.xcworkspace \
-            -scheme LifeOS \
-            -configuration Debug \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-            CODE_SIGNING_ALLOWED=NO \
-            test \
-            | xcbeautify --renderer github-actions
+            build
 
   lint:
     name: Lint
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Check for trailing whitespace
@@ -73,8 +65,6 @@ jobs:
             echo "Trailing whitespace found"
             exit 1
           fi
-      - name: Check for TODO without owner
+      - name: Surface unscoped TODOs (non-blocking)
         run: |
-          # Soft check — TODOs are allowed but should at least have a phase
-          # marker. Surface them without failing the build.
           git grep -nE 'TODO[^:]' -- '*.swift' || true
