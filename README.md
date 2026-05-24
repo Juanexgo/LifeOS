@@ -3,10 +3,16 @@
 > An AI-powered personal operating system for iPhone — built on iOS 26, Swift 6,
 > SwiftUI, SwiftData, and Apple Intelligence.
 
-[![Build](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml)
+[![CI](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Juanexgo/LifeOS/actions/workflows/ci.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
 ![iOS](https://img.shields.io/badge/iOS-26.0%2B-blue.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular%20Tuist-purple.svg)
+
+> **CI scope:** lint + ADR consistency checks on Linux. The full Xcode build
+> is verified locally with Xcode 26.5 — GitHub's hosted runners don't ship
+> Xcode 26 yet (typical 1–3 month lag after Apple ships a new major Xcode).
+> A `build` job will be added to the workflow when a macos runner image
+> includes Xcode 26.
 
 LifeOS combines an Apple-style Today screen, Tasks, Notes, Focus timer, Health,
 Finance, and a streaming AI assistant — all behind a single calm, glassmorphic
